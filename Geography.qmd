@@ -13,8 +13,19 @@ library(broom)
 
 ```{r}
 library(readr)
+All_Qual <- read_csv("RStudio_GitHub Merged Data (QUAL) - Qual (4).csv")
+#view(All_Qual)
 
-x = 1+2
-print(x)
+CE_Qual <- All_Qual |>
+  filter(str_detect(vax_location, "CE"))
+#view(CE_Qual)
+
+```
+
+```{r}
+
+CE_Qual |>
+  count(community)
+  
 
 ```
