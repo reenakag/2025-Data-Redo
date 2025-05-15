@@ -13,4 +13,8 @@ library(broom)
 
 ```{r}
 library(readr)
+
+x = 1+2
+print(x)
+
 ```
