@@ -17,15 +17,49 @@ All_Qual <- read_csv("RStudio_GitHub Merged Data (QUAL) - Qual (4).csv")
 #view(All_Qual)
 
 CE_Qual <- All_Qual |>
-  filter(str_detect(vax_location, "CE"))
+  filter(str_detect(vax_location, "CE")) |>
+  select(group_no, island_region, community, colonia, vax_location, preg_uno, preg_dos, preg_tres, preg_cuatro, preg_cinco, preg_seis)
 #view(CE_Qual)
 
 ```
 
 ```{r}
+#| label: QUAL-community-breakdown
 
 CE_Qual |>
   count(community)
-  
+
+```
+
+```{r}
+#| label: QUAL-separate-group_no
+
+CE_Qual <- CE_Qual |>
+  mutate(grupo = str_extract(group_no, "[A-Z]+")) |>
+  mutate(survey_number_non_decimal = as.integer(gsub("[^0-9]", "", group_no)))
+#view(CE_Qual)
+
+```
+
+```{r}
+#| label: read-in-quant-sheet
+
+library(readr)
+All_Quant <- read_csv("Consolidated QUANT Vax Cards POLIO SHIFTED - FINAL (shifted polios, deleted cols, etc) (4).csv")
+#View(All_Quant)
+
+All_Quant <- All_Quant |>
+  mutate(grupo = str_extract(group, "[A-Z]+")) |>
+  mutate(survey_number_decimal = as.numeric(str_extract(group, "[0-9.]+"))) |>
+  mutate(survey_number_non_decimal = trunc(survey_number_decimal))
+
+CE_Quant <- All_Quant |>
+  select(-c(date, colonia_status, gender, tarjeta))
+```
+
+```{r}
+#| label: join-quant-qual
+
+joined_CE_quant_qual <- left_join(CE_Quant, CE_Qual, by = "grupo", "survey_number_non_decimal", relationship = "many-to-many")
 
 ```
