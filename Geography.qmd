@@ -60,6 +60,19 @@ CE_Quant <- All_Quant |>
 ```{r}
 #| label: join-quant-qual
 
-joined_CE_quant_qual <- left_join(CE_Quant, CE_Qual, by = "grupo", "survey_number_non_decimal", relationship = "many-to-many")
+joined_CE_quant_qual <- left_join(CE_Quant, CE_Qual, by = c("grupo", "survey_number_non_decimal"))
 
 ```
+
+```{r}
+#| label: double-check
+
+complete_sample <- joined_CE_quant_qual |>
+  filter(!is.na(vax_location)) 
+
+complete_sample |>
+  select(group, grupo, survey_number_decimal, survey_number_non_decimal, group_no, everything()) |>
+  view()
+
+```
+
