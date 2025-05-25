@@ -1,0 +1,120 @@
+---
+title: "all_vax_card_data"
+format: html
+---
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(readxl)
+library(googlesheets4)
+library(broom)
+```
+
+
+```{r}
+#| label: read-in-sheets
+
+library(readr)
+All_Qual <- read_csv("RStudio_GitHub Merged Data (QUAL) - Qual (4).csv")
+All_Quant <- read_csv("Consolidated QUANT Vax Cards POLIO SHIFTED - FINAL (shifted polios, deleted cols, etc) (4).csv")
+
+```
+
+```{r}
+#| label: modify-sheets
+
+qual <- All_Qual |>
+  mutate(grupo = str_extract(group_no, "[A-Z]+")) |>
+  mutate(survey_number_non_decimal = as.integer(gsub("[^0-9]", "", group_no)))
+
+quant <- All_Quant |>
+  mutate(grupo = str_extract(group, "[A-Z]+")) |>
+  mutate(survey_number_decimal = as.numeric(str_extract(group, "[0-9.]+"))) |>
+  mutate(survey_number_non_decimal = trunc(survey_number_decimal))
+
+```
+
+```{r}
+#| label: merge-sheets
+
+joined_quant_qual <- left_join(quant, qual, by = c("grupo", "survey_number_non_decimal"))
+
+```
+
+```{r}
+#| label: double-check
+
+joined_quant_qual <- joined_quant_qual |>
+  filter(!is.na(vax_location)) |>
+  select(group, grupo, survey_number_decimal, survey_number_non_decimal, group_no, date.x, date.y, everything())
+
+write.csv(joined_quant_qual, "all_merged_data.csv", row.names = FALSE)
+
+#this now contains all of the surveys that 1) had vax cards & 2) indicated vax location (n = 202 children)
+
+```
+
+```{r}
+#| label: narrow-down
+
+narrowed_joined <- joined_quant_qual |>
+  select(-c(grupo, date.x, survey_number_decimal, survey_number_non_decimal, colonia_status, tarjeta, survey_lang, relation_to_child, survey_location, household_size, kids_under_eleven, work, respondent_birth_year, years_in_roatan, years_category, last_grade, last_grade_category, walking_dist, auto_dist))
+  
+```
+
+```{r}
+#| label: mutate
+
+narrowed_joined$date.y <- as.Date(narrowed_joined$date.y, format = "%d-%m-%y")
+narrowed_joined$dob <- as.Date(narrowed_joined$dob, format = "%d-%m-%Y")
+
+```
+
+```{r}
+#| label: desired-vax-score
+
+narrowed_joined <- narrowed_joined |>
+  mutate(age_in_days = date.y - dob) |>
+  mutate(age_in_years = as.numeric(age_in_days) / 365.25) |>
+  mutate(age_rounded = round(age_in_years, 1))
+
+
+narrowed_joined <- narrowed_joined |>
+  mutate(desired_vax_score = if_else(age_rounded < 0.2, 2, 
+                              if_else(age_rounded >= 0.2 & age_rounded < 0.3, 6,
+                               if_else(age_rounded >= 0.3 & age_rounded < 0.5, 10,
+                                if_else(age_rounded >= 0.5 & age_rounded < 1.0, 13, 
+                                 if_else(age_rounded >= 1.0 & age_rounded < 1.5, 15,
+                                  if_else(age_rounded >= 1.5 & age_rounded < 4, 18,
+                                   if_else(age_rounded >= 4 & age_rounded < 11, 19,
+                                    if_else(age_rounded >= 11 & gender == "M", 20,
+                                     if_else(age_rounded >= 11 & gender == "F", 21, 0))))))))))
+
+
+
+```
+
+```{r}
+#| label: actual-vax-score
+
+narrowed_joined$actual_vax_score <- rowSums(!is.na(narrowed_joined[, 6:26]))
+
+```
+
+```{r}
+#| label: has-all-vax
+
+narrowed_joined <- narrowed_joined |>
+  mutate(complete = if_else(actual_vax_score >= desired_vax_score, TRUE, FALSE))
+
+narrowed_joined |>
+  count(complete)
+```
+
+```{r}
+#need to make overall adherence data (like how many kids are fully up to date, CE vs. no CE)
+#need to probs do the whole new data frame and join to figure out adherence for each indiv vax (or could just use the !is.na() func) and do CE vs. not CE
+#then do the T/F questions analysis for CE vs. not CE
+
+```

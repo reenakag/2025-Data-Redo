@@ -54,7 +54,7 @@ All_Quant <- All_Quant |>
   mutate(survey_number_non_decimal = trunc(survey_number_decimal))
 
 CE_Quant <- All_Quant |>
-  select(-c(date, colonia_status, gender, tarjeta))
+  select(-c(colonia_status, gender, tarjeta))
 ```
 
 ```{r}
@@ -75,4 +75,3 @@ complete_sample |>
   view()
 
 ```
-
